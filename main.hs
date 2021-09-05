@@ -1,5 +1,6 @@
 import PA1Helper
 import System.Environment (getArgs)
+import Data.Map (Map)
 
 -- Haskell representation of lambda expression
 -- data Lexp = Atom String | Lambda String Lexp | Apply Lexp  Lexp 
@@ -20,11 +21,21 @@ id' v@(Atom _) = v
 id' lexp@(Lambda _ _) = lexp
 id' lexp@(Apply _ _) = lexp 
 
+uniqueRename :: Lexp -> Map -> Lexp
+uniqueRename at@(Atom _) mp = at
+uniqueRename la@(Lambda _ _) mp = la
+uniqueRename ap@(Apply _ _) mp = ap
+
+aR :: Lexp -> Lexp -> Lexp -> Lexp
+aR at@(Atom _) from@(Atom _) to@(Atom _) = at
+aR la@(Lambda _ _) from@(Atom _) to@(Atom _) = la
+aR ap@(Apply _ _) from@(Atom _) to@(Atom _) = ap
+
 -- You will need to write a reducer that does something more than
 -- return whatever it was given, of course!
-
 reducer :: Lexp -> Lexp
-reducer lexp = lexp
+reducer lexp = (uniqueRename lexp mp)
+    where mp = Map::
 
 -- Entry point of program
 main = do

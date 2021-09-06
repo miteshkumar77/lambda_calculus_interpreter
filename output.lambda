@@ -1,8 +1,8 @@
-(\xx0.\yx0.(yx0 xx0) (yx1 wx0))
-(\xx0.\yx0.(xx0 yx0) (yx1 wx0))
-(\xx0.xx0 yx0)
-\xx0.(yx0 xx0)
-((\yx0.\xx0.(yx0 xx0) \xx1.(xx1 xx1)) yx1)
-(((\bx0.\tx0.\ex0.((bx0 tx0) ex0) \xx0.\yx0.xx0) xx1) yx1)
-\xx0.((\xx1.(yx0 xx1) \xx2.(zx0 xx2)) xx2)
-(\yx0.(\xx0.\yx1.(xx0 yx1) yx1) (yx2 wx0))
+\yx1.(yx1 (y w))
+\yx1.((y w) yx1)
+y
+\xx0.(y xx0)
+(y y)
+x
+\xx0.((y \xx2.(z xx2)) xx2)
+\yx2.(yx2 yx2)

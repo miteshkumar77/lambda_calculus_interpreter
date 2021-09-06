@@ -4,6 +4,7 @@ import Data.Map (Map)
 import qualified Data.Map as SymbolIDs
 import qualified Data.Map as Map
 import Data.Set (Set)
+import Debug.Trace ( trace ) 
 import qualified Data.Set as BoundIDs
 import qualified Data.Set as Set
 import Data.Maybe ( fromJust )
@@ -24,6 +25,11 @@ import qualified Distribution.Simple as SymbolIDs
 -- that represents the entire structure, while pattern matching on
 -- components of the structure.
 
+id' :: Lexp -> Lexp
+id' v@(Atom _) = v
+id' lexp@(Lambda _ _) = lexp
+id' lexp@(Apply _ _) = lexp
+
 -- \x.(\y.(y x) (y x))
 -- \z.(\y.(y z) (y x))
 -- \z.((y x) z)
@@ -35,6 +41,7 @@ import qualified Distribution.Simple as SymbolIDs
 -- (\x.\y.(y x) (y w))
 -- (\x.\z.(z x) (y w))
 -- (\z.(z (y w)))
+
 delim :: String
 delim = "x"
 
@@ -44,6 +51,13 @@ data LexpIDs = LexpIDs{ lexp :: Lexp
                       , ids :: SymbolIDs }
 
 
+strEquals :: String -> String -> Bool
+strEquals [] [] = True
+strEquals _ [] = False
+strEquals [] _ = False
+strEquals (ax:a) (bx:b) = ax == bx && strEquals a b
+
+
 isBetaReducible :: Lexp -> Bool
 isBetaReducible lexp@(Apply la@(Lambda _ _) _) = True
 isBetaReducible _ = False
@@ -51,13 +65,8 @@ isBetaReducible _ = False
 getLexp :: LexpIDs -> Lexp
 getLexp lid@(LexpIDs lexp _) = lexp
 
-getIDs:: LexpIDs -> SymbolIDs 
+getIDs:: LexpIDs -> SymbolIDs
 getIDs lid@(LexpIDs _ symbs) = symbs
-
-id' :: Lexp -> Lexp
-id' v@(Atom _) = v
-id' lexp@(Lambda _ _) = lexp
-id' lexp@(Apply _ _) = lexp
 
 
 strConcat :: String -> String -> String
@@ -77,12 +86,12 @@ initSymbs ap@(Apply func args) bd = Map.union (initSymbs func bd) (initSymbs arg
 -- If it exists in the map, then return (symb)_(count)
 getSymbol :: String -> SymbolIDs -> String
 getSymbol symb mp
-    | Map.member symb mp = 
+    | Map.member symb mp =
         let countStr = show (fromJust (Map.lookup symb mp))
             suff = strConcat delim countStr
         in
             strConcat symb suff
-    | otherwise = 
+    | otherwise =
         let suff = delim ++ "0"
         in
             strConcat symb suff
@@ -113,12 +122,12 @@ addSymbol symb mp
 -- This allows us to avoid alpha-renaming all together
 uniqueRename :: Lexp -> SymbolIDs -> BoundIDs -> LexpIDs
 uniqueRename at@(Atom name) mp bd
-    | Set.member name bd = 
+    | Set.member name bd =
         let newsymb = Atom (getSymbol name mp)
         in
             LexpIDs newsymb mp
     | otherwise = LexpIDs (Atom name) mp
-uniqueRename la@(Lambda name lexp) mp bd = 
+uniqueRename la@(Lambda name lexp) mp bd =
     let newbd = Set.insert name bd
         newmp = addSymbol name mp
         newsymb = getSymbol name newmp
@@ -134,16 +143,16 @@ uniqueRename ap@(Apply func args) mp bd =
         LexpIDs newap (getIDs argslids)
 
 replace :: String -> Lexp -> Lexp -> Lexp
-replace before after v@(Atom name) 
+replace before after v@(Atom name)
     | before == name = after
     | otherwise = v
-replace before after lexp@(Lambda name func) = 
+replace before after lexp@(Lambda name func) =
     Lambda name (replace before after func)
-replace before after lexp@(Apply func args) = 
+replace before after lexp@(Apply func args) =
     Apply (replace before after func) (replace before after args)
 
 betaReduce :: Lexp -> Lexp
-betaReduce ap@(Apply la@(Lambda symb func) args) = 
+betaReduce ap@(Apply la@(Lambda symb func) args) =
     let newlexp = replace symb args func
     in
         betaReduce newlexp
@@ -154,20 +163,43 @@ betaReduce ap@(Apply func args)
 betaReduce at@(Atom _) = at
 betaReduce la@(Lambda name lexp) = Lambda name (betaReduce lexp)
 
+contains :: Lexp -> String -> Bool
+contains v@(Atom name) symb = name /= symb
+contains lexp@(Lambda name func) symb = contains func symb
+contains lexp@(Apply func args) symb = contains func symb || contains args symb
+
+atomIsStr :: Lexp -> String -> Bool
+atomIsStr at@(Atom name) s = name == s
+atomIsStr _ _ = False
+
 isEtaReducible :: Lexp -> Bool
-isEtaReducible 
+isEtaReducible la@(Lambda name e@(Apply func at@(Atom atomName))) =
+    not (contains func name) && name == atomName
+isEtaReducible _ = False
+
+getExp :: Lexp -> Lexp
+getExp la@(Lambda name e@(Apply func _)) = func
 
 etaReduce :: Lexp -> Lexp
-
+etaReduce la@(Lambda name e@(Apply func args))
+    | isEtaReducible la =
+        let d = trace ("eta reducible exp: " ++ show la)
+            init_reduce = getExp la
+        in
+            etaReduce init_reduce
+    | otherwise = Lambda name (etaReduce e)
+etaReduce at@(Atom _) = at
+etaReduce ap@(Apply func args) = Apply (etaReduce func) (etaReduce args)
 
 -- You will need to write a reducer that does something more than
 -- return whatever it was given, of course!
 reducer :: Lexp -> Lexp
 reducer lexp = r
-    --where r = uniqueRename lexp SymbolIDs.empty BoundIDs.empty
     where uni = getLexp (uniqueRename lexp (initSymbs lexp BoundIDs.empty) BoundIDs.empty)
-          betar = betaReduce uni 
-          r = betar
+          betar = betaReduce uni
+          etar = etaReduce betar
+          r = etar
+
 
 -- Entry point of program
 main = do
@@ -177,3 +209,12 @@ main = do
     -- id' simply returns its input, so runProgram will result
     -- in printing each lambda expression twice. 
     runProgram inFile outFile reducer
+
+
+-- Takes all bound variables, and gives them a unique name
+
+
+-- (\x.\y.(y x) (y w)) -> alpha
+-- (\x0.\y0.(y0 x) (y w))
+-- \y0.(y0 (y w))
+-- WRONG: \y.(y (y w))

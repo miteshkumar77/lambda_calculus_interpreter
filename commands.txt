@@ -1,0 +1,4 @@
+
+
+ghc main.hs
+./main sample.lambda output.lambda

@@ -30,6 +30,9 @@ id' v@(Atom _) = v
 id' lexp@(Lambda _ _) = lexp
 id' lexp@(Apply _ _) = lexp
 
+debug :: String -> Lexp -> Lexp
+debug s l = trace (s ++ show l) l
+
 -- \x.(\y.(y x) (y x))
 -- \z.(\y.(y z) (y x))
 -- \z.((y x) z)
@@ -45,10 +48,102 @@ id' lexp@(Apply _ _) = lexp
 delim :: String
 delim = "x"
 
-type SymbolIDs = Map String Int
-type BoundIDs = Set String
-data LexpIDs = LexpIDs{ lexp :: Lexp
-                      , ids :: SymbolIDs }
+type LabelMapT = Map String Int
+type BoundSetT = Set String
+data LexpLabelMapPair = LexpLabelMapPair {
+    lexp :: Lexp
+    , labels :: LabelMapT 
+}
+
+getLexp :: LexpLabelMapPair -> Lexp
+getLexp llmp@(LexpLabelMapPair lexp _) = lexp
+
+getLabels :: LexpLabelMapPair -> LabelMapT 
+getLabels llmp@(LexpLabelMapPair _ labels) = labels
+
+
+
+data NextCurrLabelMapPair = NextCurrLabelMapPair {
+    currLabels :: LabelMapT
+    , nextLabels :: LabelMapT
+}
+
+getCurrLabels :: NextCurrLabelMapPair -> LabelMapT
+getCurrLabels nclmp@(NextCurrLabelMapPair currLabels _) = currLabels
+
+getNextLabels :: NextCurrLabelMapPair -> LabelMapT
+getNextLabels nclmp@(NextCurrLabelMapPair _ nextLabels) = nextLabels
+
+
+
+initLabels :: Lexp -> BoundSetT -> LabelMapT
+initLabels v@(Atom name) bounded
+    | Set.member name bounded = Map.empty
+    | otherwise = Map.singleton name 0
+initLabels la@(Lambda name lexp) bounded = initLabels lexp (Set.insert name bounded)
+initLabels ap@(Apply func args) bounded = 
+    Map.union (initLabels func bounded) (initLabels args bounded)
+
+
+symbolLabel :: String -> LabelMapT -> String
+symbolLabel symb labelmap
+    | Map.member symb labelmap = 
+        let countStr = show (fromJust (Map.lookup symb labelmap))
+            suff = strConcat delim countStr
+        in strConcat symb suff
+    | otherwise =
+        let suff = delim ++ "0"
+        in strConcat symb suff
+
+incrementKey :: String -> LabelMapT -> LabelMapT
+incrementKey symb labelmap 
+    | Map.member symb labelmap = Map.insert symb (inc (fromJust (Map.lookup symb labelmap))) labelmap
+    | otherwise = Map.insert symb 0 labelmap
+
+
+setNextSymbLabelUtil :: String -> LabelMapT -> LabelMapT
+setNextSymbLabelUtil symb labelmap
+    | Map.member (symbolLabel symb labelmap) labelmap = 
+        setNextSymbLabelUtil symb (incrementKey symb labelmap) 
+    | otherwise = incrementKey (symbolLabel symb labelmap) labelmap
+
+
+setNextSymbLabel :: String -> LabelMapT -> LabelMapT
+setNextSymbLabel symb labelmap = setNextSymbLabelUtil symb (incrementKey symb labelmap)
+    
+
+setCurrSymbLabel :: String -> LabelMapT -> LabelMapT -> NextCurrLabelMapPair
+setCurrSymbLabel symb currmap nextmap = 
+    let newnextmap = setNextSymbLabel symb nextmap
+        newcurrmap = Map.insert symb (fromJust (Map.lookup symb newnextmap)) currmap
+    in NextCurrLabelMapPair newcurrmap newnextmap
+
+uniqueRename :: Lexp -> LabelMapT -> LabelMapT -> BoundSetT -> LexpLabelMapPair
+uniqueRename at@(Atom name) currmap nextmap bounded
+    | Set.member name bounded =
+        let newsymb = Atom (symbolLabel name currmap)
+        in LexpLabelMapPair newsymb nextmap
+    | otherwise = LexpLabelMapPair at nextmap
+uniqueRename la@(Lambda name lexp) currmap nextmap bounded =
+    let newbounded = Set.insert name bounded
+        newCurrNextPair = setCurrSymbLabel name currmap nextmap
+        newCurrMap = getCurrLabels newCurrNextPair
+        newNextMap = getNextLabels newCurrNextPair
+        newsymb = symbolLabel name newCurrMap
+        newLexpLabelMapPair = uniqueRename lexp newCurrMap newNextMap newbounded
+        cumNextMap = getLabels newLexpLabelMapPair
+        cumLexp = getLexp newLexpLabelMapPair
+    in LexpLabelMapPair (Lambda newsymb cumLexp) cumNextMap
+uniqueRename ap@(Apply func args) currmap nextmap bounded = 
+    let funcLabelMapPair = uniqueRename func currmap nextmap bounded
+        funcNextMap = getLabels funcLabelMapPair
+        funcNextLexp = getLexp funcLabelMapPair
+        argsLabelMapPair = uniqueRename args currmap funcNextMap bounded
+        argsNextMap = getLabels argsLabelMapPair
+        argsNextLexp = getLexp argsLabelMapPair
+    in LexpLabelMapPair (Apply funcNextLexp argsNextLexp) argsNextMap
+
+
 
 
 strEquals :: String -> String -> Bool
@@ -62,85 +157,11 @@ isBetaReducible :: Lexp -> Bool
 isBetaReducible lexp@(Apply la@(Lambda _ _) _) = True
 isBetaReducible _ = False
 
-getLexp :: LexpIDs -> Lexp
-getLexp lid@(LexpIDs lexp _) = lexp
-
-getIDs:: LexpIDs -> SymbolIDs
-getIDs lid@(LexpIDs _ symbs) = symbs
-
-
 strConcat :: String -> String -> String
 strConcat a b = a ++ b
 
 inc :: Int -> Int
 inc i = i + 1
-
-initSymbs :: Lexp -> BoundIDs -> SymbolIDs
-initSymbs v@(Atom name) bd
-    | Set.member name bd = Map.empty
-    | otherwise = Map.singleton name 0
-initSymbs la@(Lambda name lexp) bd = initSymbs lexp (Set.insert name bd)
-initSymbs ap@(Apply func args) bd = Map.union (initSymbs func bd) (initSymbs args bd)
-
--- Get the symbol this input symbol should use
--- If it exists in the map, then return (symb)_(count)
-getSymbol :: String -> SymbolIDs -> String
-getSymbol symb mp
-    | Map.member symb mp =
-        let countStr = show (fromJust (Map.lookup symb mp))
-            suff = strConcat delim countStr
-        in
-            strConcat symb suff
-    | otherwise =
-        let suff = delim ++ "0"
-        in
-            strConcat symb suff
-
--- Util function for addSymbol: 
--- keeps incrementing the count of the symbol until
--- the result of getSymbol is not within the map
--- Then return the map
-addSymbolUtil :: String -> SymbolIDs -> SymbolIDs
-addSymbolUtil symb mp
-    | Map.member (getSymbol symb mp) mp = addSymbolUtil symb (Map.insert symb (inc (fromJust (Map.lookup symb mp))) mp)
-    | otherwise = mp
-
--- Add an occurrence of symbol to the hashtable
--- Increment its key value if it already exists
--- This should be used when we encounter a variable 
--- that is bound in a lambda, or is a free variable
--- The algorithm discussed here: https://leetcode.com/problems/making-file-names-unique/
--- is critical to this function
-addSymbol :: String -> SymbolIDs -> SymbolIDs
-addSymbol symb mp
-    | Map.member symb mp = addSymbolUtil symb (Map.insert symb (inc (fromJust (Map.lookup symb mp))) mp)
-    | otherwise = Map.insert symb 0 mp
-
-
--- Rename the entire expression such that all bound-variables have the same
--- unique name, and all free variables have unique names
--- This allows us to avoid alpha-renaming all together
-uniqueRename :: Lexp -> SymbolIDs -> BoundIDs -> LexpIDs
-uniqueRename at@(Atom name) mp bd
-    | Set.member name bd =
-        let newsymb = Atom (getSymbol name mp)
-        in
-            LexpIDs newsymb mp
-    | otherwise = LexpIDs (Atom name) mp
-uniqueRename la@(Lambda name lexp) mp bd =
-    let newbd = Set.insert name bd
-        newmp = addSymbol name mp
-        newsymb = getSymbol name newmp
-        newlids = uniqueRename lexp newmp newbd
-        newlamb = Lambda newsymb (getLexp newlids)
-    in
-        LexpIDs newlamb  (getIDs newlids)
-uniqueRename ap@(Apply func args) mp bd =
-    let funclids = uniqueRename func mp bd
-        argslids = uniqueRename args (getIDs funclids) bd
-        newap = Apply (getLexp funclids) (getLexp argslids)
-    in
-        LexpIDs newap (getIDs argslids)
 
 replace :: String -> Lexp -> Lexp -> Lexp
 replace before after v@(Atom name)
@@ -168,10 +189,6 @@ contains v@(Atom name) symb = name /= symb
 contains lexp@(Lambda name func) symb = contains func symb
 contains lexp@(Apply func args) symb = contains func symb || contains args symb
 
-atomIsStr :: Lexp -> String -> Bool
-atomIsStr at@(Atom name) s = name == s
-atomIsStr _ _ = False
-
 isEtaReducible :: Lexp -> Bool
 isEtaReducible la@(Lambda name e@(Apply func at@(Atom atomName))) =
     not (contains func name) && name == atomName
@@ -195,10 +212,11 @@ etaReduce ap@(Apply func args) = Apply (etaReduce func) (etaReduce args)
 -- return whatever it was given, of course!
 reducer :: Lexp -> Lexp
 reducer lexp = r
-    where uni = getLexp (uniqueRename lexp (initSymbs lexp BoundIDs.empty) BoundIDs.empty)
-          betar = betaReduce uni
-          etar = etaReduce betar
-          r = etar
+    where 
+        initLabelMap = initLabels lexp Set.empty
+        uni = getLexp (uniqueRename lexp initLabelMap initLabelMap Set.empty)
+        betar = betaReduce uni
+        r = betar
 
 
 -- Entry point of program
@@ -218,3 +236,5 @@ main = do
 -- (\x0.\y0.(y0 x) (y w))
 -- \y0.(y0 (y w))
 -- WRONG: \y.(y (y w))
+
+

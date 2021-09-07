@@ -4,5 +4,6 @@ y
 \xx0.(y xx0)
 (y y)
 x
-\xx0.((y \xx2.(z xx2)) xx2)
-yx2
+\xx0.((y \xx2.(z xx2)) xx0)
+\yx2.((y w) yx2)
+\yx2x0.(yx2x0 yx2x0)

@@ -1,9 +1,9 @@
 \yx1.(yx1 (y w))
-\yx1.((y w) yx1)
+(y w)
 y
-\xx0.(y xx0)
+y
 (y y)
 x
-\xx0.((y \xx2.(z xx2)) xx0)
-\yx2.((y w) yx2)
+(y z)
+(y w)
 \yx2x0.(yx2x0 yx2x0)

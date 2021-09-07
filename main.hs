@@ -185,7 +185,7 @@ betaReduce at@(Atom _) = at
 betaReduce la@(Lambda name lexp) = Lambda name (betaReduce lexp)
 
 contains :: Lexp -> String -> Bool
-contains v@(Atom name) symb = name /= symb
+contains v@(Atom name) symb = name == symb
 contains lexp@(Lambda name func) symb = contains func symb
 contains lexp@(Apply func args) symb = contains func symb || contains args symb
 
@@ -216,7 +216,8 @@ reducer lexp = r
         initLabelMap = initLabels lexp Set.empty
         uni = getLexp (uniqueRename lexp initLabelMap initLabelMap Set.empty)
         betar = betaReduce uni
-        r = betar
+        etar = etaReduce betar
+        r = etar
 
 
 -- Entry point of program

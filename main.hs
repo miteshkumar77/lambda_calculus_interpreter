@@ -33,18 +33,6 @@ id' lexp@(Apply _ _) = lexp
 debug :: String -> Lexp -> Lexp
 debug s l = trace (s ++ show l) l
 
--- \x.(\y.(y x) (y x))
--- \z.(\y.(y z) (y x))
--- \z.((y x) z)
-
--- (\x.(\y.(x y) x) q)
--- (\y.(q y) q)
-
-
--- (\x.\y.(y x) (y w))
--- (\x.\z.(z x) (y w))
--- (\z.(z (y w)))
-
 delim :: String
 delim = "x"
 
@@ -61,8 +49,6 @@ getLexp llmp@(LexpLabelMapPair lexp _) = lexp
 getLabels :: LexpLabelMapPair -> LabelMapT 
 getLabels llmp@(LexpLabelMapPair _ labels) = labels
 
-
-
 data NextCurrLabelMapPair = NextCurrLabelMapPair {
     currLabels :: LabelMapT
     , nextLabels :: LabelMapT
@@ -74,8 +60,6 @@ getCurrLabels nclmp@(NextCurrLabelMapPair currLabels _) = currLabels
 getNextLabels :: NextCurrLabelMapPair -> LabelMapT
 getNextLabels nclmp@(NextCurrLabelMapPair _ nextLabels) = nextLabels
 
-
-
 initLabels :: Lexp -> BoundSetT -> LabelMapT
 initLabels v@(Atom name) bounded
     | Set.member name bounded = Map.empty
@@ -83,7 +67,6 @@ initLabels v@(Atom name) bounded
 initLabels la@(Lambda name lexp) bounded = initLabels lexp (Set.insert name bounded)
 initLabels ap@(Apply func args) bounded = 
     Map.union (initLabels func bounded) (initLabels args bounded)
-
 
 symbolLabel :: String -> LabelMapT -> String
 symbolLabel symb labelmap
@@ -100,17 +83,14 @@ incrementKey symb labelmap
     | Map.member symb labelmap = Map.insert symb (inc (fromJust (Map.lookup symb labelmap))) labelmap
     | otherwise = Map.insert symb 0 labelmap
 
-
 setNextSymbLabelUtil :: String -> LabelMapT -> LabelMapT
 setNextSymbLabelUtil symb labelmap
     | Map.member (symbolLabel symb labelmap) labelmap = 
         setNextSymbLabelUtil symb (incrementKey symb labelmap) 
     | otherwise = incrementKey (symbolLabel symb labelmap) labelmap
 
-
 setNextSymbLabel :: String -> LabelMapT -> LabelMapT
 setNextSymbLabel symb labelmap = setNextSymbLabelUtil symb (incrementKey symb labelmap)
-    
 
 setCurrSymbLabel :: String -> LabelMapT -> LabelMapT -> NextCurrLabelMapPair
 setCurrSymbLabel symb currmap nextmap = 
@@ -142,16 +122,6 @@ uniqueRename ap@(Apply func args) currmap nextmap bounded =
         argsNextMap = getLabels argsLabelMapPair
         argsNextLexp = getLexp argsLabelMapPair
     in LexpLabelMapPair (Apply funcNextLexp argsNextLexp) argsNextMap
-
-
-
-
-strEquals :: String -> String -> Bool
-strEquals [] [] = True
-strEquals _ [] = False
-strEquals [] _ = False
-strEquals (ax:a) (bx:b) = ax == bx && strEquals a b
-
 
 isBetaReducible :: Lexp -> Bool
 isBetaReducible lexp@(Apply la@(Lambda _ _) _) = True
@@ -228,14 +198,3 @@ main = do
     -- id' simply returns its input, so runProgram will result
     -- in printing each lambda expression twice. 
     runProgram inFile outFile reducer
-
-
--- Takes all bound variables, and gives them a unique name
-
-
--- (\x.\y.(y x) (y w)) -> alpha
--- (\x0.\y0.(y0 x) (y w))
--- \y0.(y0 (y w))
--- WRONG: \y.(y (y w))
-
-

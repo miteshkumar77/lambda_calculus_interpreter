@@ -175,6 +175,7 @@ etaReduce la@(Lambda name e@(Apply func args))
         in
             etaReduce init_reduce
     | otherwise = Lambda name (etaReduce e)
+etaReduce la@(Lambda name func) = Lambda name (etaReduce func)
 etaReduce at@(Atom _) = at
 etaReduce ap@(Apply func args) = Apply (etaReduce func) (etaReduce args)
 
@@ -187,7 +188,7 @@ reducer lexp = r
         uni = getLexp (uniqueRename lexp initLabelMap initLabelMap Set.empty)
         betar = betaReduce uni
         etar = etaReduce betar
-        r = etar
+        r = betar
 
 
 -- Entry point of program

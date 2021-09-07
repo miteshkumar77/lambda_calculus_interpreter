@@ -7,3 +7,8 @@
 \x.((\x.(y x) \x.(z x)) x)
 (\y.(\x.\y.(x y) y) (y w))
 (\x.(y x) xx0)
+(\x.\y.(y x) (\z.(q z) (y w)))
+(\x.\y.(x y) (\z.(q z) (y w)))
+(((\x.\x.\x.\x.\x.\x.\x.x y) y) y)
+(\x.\x.x y)
+(\z.\x.z y)

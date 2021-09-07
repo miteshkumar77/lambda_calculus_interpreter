@@ -1,0 +1,13 @@
+(\xx0.\yx0.(xx0 yx0) (\zx0.(q zx0) (y w))) -beta->
+\yx0.((\zx0.(q zx0) (y w)) yx0) -beta->
+\yx0.((q (y w)) yx0) -eta->
+(q (y w))
+
+
+
+(((\x.\x.\x.\x.\x.\x.\x.x y) y) y)
+
+((\x.\x.\x.\x.\x.\x.y y) y)
+
+(\x.\x.\x.\x.\x.y y)
+\x.\x.\x.\x.y

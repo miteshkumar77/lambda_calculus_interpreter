@@ -24,20 +24,25 @@ import qualified Distribution.Simple as SymbolIDs
 -- can use the bound variable. The "@" allows you to retain a variable
 -- that represents the entire structure, while pattern matching on
 -- components of the structure.
-
 id' :: Lexp -> Lexp
 id' v@(Atom _) = v
 id' lexp@(Lambda _ _) = lexp
 id' lexp@(Apply _ _) = lexp
 
+-- Debug passthrough function for lazy evaluation
 debug :: String -> Lexp -> Lexp
 debug s l = trace (s ++ show l) l
 
+-- allows file names to be unique
 delim :: String
 delim = "x"
 
+-- We use this datatype for alpha-renaming
 type LabelMapT = Map String Int
+-- We use this datatype for detecting bounded/unbounded-ness of variables
 type BoundSetT = Set String
+
+-- For returning multiple values in the current label increment function
 data LexpLabelMapPair = LexpLabelMapPair {
     lexp :: Lexp
     , labels :: LabelMapT 
@@ -49,6 +54,7 @@ getLexp llmp@(LexpLabelMapPair lexp _) = lexp
 getLabels :: LexpLabelMapPair -> LabelMapT 
 getLabels llmp@(LexpLabelMapPair _ labels) = labels
 
+-- For returning multiple values in the unique renaming function
 data NextCurrLabelMapPair = NextCurrLabelMapPair {
     currLabels :: LabelMapT
     , nextLabels :: LabelMapT
@@ -60,6 +66,10 @@ getCurrLabels nclmp@(NextCurrLabelMapPair currLabels _) = currLabels
 getNextLabels :: NextCurrLabelMapPair -> LabelMapT
 getNextLabels nclmp@(NextCurrLabelMapPair _ nextLabels) = nextLabels
 
+-- Initialize labels such that if we have a free variable value named
+-- xx0, this would conflict with a bound variable which will start counting
+-- upwards from xx0 xx1 ..., so we must make sure that xx0 is marked as occupied
+-- before running our unique renaming algorithm
 initLabels :: Lexp -> BoundSetT -> LabelMapT
 initLabels v@(Atom name) bounded
     | Set.member name bounded = Map.empty
@@ -68,6 +78,8 @@ initLabels la@(Lambda name lexp) bounded = initLabels lexp (Set.insert name boun
 initLabels ap@(Apply func args) bounded = 
     Map.union (initLabels func bounded) (initLabels args bounded)
 
+-- Based on the LabelMap, get the string representation of 
+-- a particular symbol after renaming it
 symbolLabel :: String -> LabelMapT -> String
 symbolLabel symb labelmap
     | Map.member symb labelmap = 
@@ -83,21 +95,45 @@ incrementKey symb labelmap
     | Map.member symb labelmap = Map.insert symb (inc (fromJust (Map.lookup symb labelmap))) labelmap
     | otherwise = Map.insert symb 0 labelmap
 
+-- Util function for setNextSymbLabel
+-- Keep incrementing a symbol's value in the map until
+-- the string representation of that symbol isn't a key in the map
+-- Then also add the string representation of this as a key to the map
+-- with value 0
 setNextSymbLabelUtil :: String -> LabelMapT -> LabelMapT
 setNextSymbLabelUtil symb labelmap
     | Map.member (symbolLabel symb labelmap) labelmap = 
         setNextSymbLabelUtil symb (incrementKey symb labelmap) 
     | otherwise = incrementKey (symbolLabel symb labelmap) labelmap
 
+-- Keep incrementing the value of a symbol
+-- until its string representation cannot conflict with any variables
 setNextSymbLabel :: String -> LabelMapT -> LabelMapT
 setNextSymbLabel symb labelmap = setNextSymbLabelUtil symb (incrementKey symb labelmap)
 
+-- We want to maintain two maps
+-- the current map will contain the current mapping from symbol to number
+-- within the current scope. The next map will contain the current mapping from
+-- symbol to the highest number we have seen so far for this value in the entire
+-- traversal
+-- That means that the next map must be passed from the return value of the left
+-- subtree into the parameter of the right subtree, such that we do not duplicate
+-- any values in the right subtree
+--
+-- setCurrSymbLabel increments the nextmap key value until it connot form a duplicate
+-- and then sets the current map key value to the corresponding value in next map
+-- Then it returns both modified maps
 setCurrSymbLabel :: String -> LabelMapT -> LabelMapT -> NextCurrLabelMapPair
 setCurrSymbLabel symb currmap nextmap = 
     let newnextmap = setNextSymbLabel symb nextmap
         newcurrmap = Map.insert symb (fromJust (Map.lookup symb newnextmap)) currmap
     in NextCurrLabelMapPair newcurrmap newnextmap
 
+
+-- Apply alpha renaming such that all bound variables have a unique name that
+-- do not conflict with any other bound/free variable.
+
+-- Allows us to be certain that no issues arise from name-collision. 
 uniqueRename :: Lexp -> LabelMapT -> LabelMapT -> BoundSetT -> LexpLabelMapPair
 uniqueRename at@(Atom name) currmap nextmap bounded
     | Set.member name bounded =
@@ -133,6 +169,9 @@ strConcat a b = a ++ b
 inc :: Int -> Int
 inc i = i + 1
 
+-- Within a Lexp object, replace all atoms with string value v
+-- with another Lexp value
+-- Used for beta reduction
 replace :: String -> Lexp -> Lexp -> Lexp
 replace before after v@(Atom name)
     | before == name = after
@@ -142,13 +181,17 @@ replace before after lexp@(Lambda name func) =
 replace before after lexp@(Apply func args) =
     Apply (replace before after func) (replace before after args)
 
+-- Apply beta reduce to (\x.E M) by replacing all occurrences of x in
+-- E with M. to become {E/x->M}. Then recursively apply beta reduce to
+-- {E/x->M} and return it
+
+-- If beta reduce is of the form 
 betaReduce :: Lexp -> Lexp
 betaReduce ap@(Apply la@(Lambda symb func) args) =
     let newlexp = replace symb args func
-    in
-        betaReduce newlexp
+    in betaReduce newlexp
 betaReduce ap@(Apply func args)
-        | isBetaReducible init_reduce = betaReduce init_reduce
+        | init_reduce /= ap && isBetaReducible init_reduce = betaReduce init_reduce
         | otherwise = init_reduce
     where init_reduce = Apply (betaReduce func) (betaReduce args)
 betaReduce at@(Atom _) = at
@@ -170,7 +213,7 @@ getExp la@(Lambda name e@(Apply func _)) = func
 etaReduce :: Lexp -> Lexp
 etaReduce la@(Lambda name e@(Apply func args))
     | isEtaReducible la =
-        let d = trace ("eta reducible exp: " ++ show la)
+        let d = la
             init_reduce = getExp la
         in
             etaReduce init_reduce
@@ -188,10 +231,11 @@ reducer lexp = r
         uni = getLexp (uniqueRename lexp initLabelMap initLabelMap Set.empty)
         betar = betaReduce uni
         etar = etaReduce betar
-        r = betar
+        r = etar
 
 
 -- Entry point of program
+main :: IO ()
 main = do
     args <- getArgs
     let inFile = case args of { x:_ -> x; _ -> "input.lambda" }

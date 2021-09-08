@@ -1,14 +1,14 @@
 \yx1.(yx1 (y w))
-\yx1.((y w) yx1)
+(y w)
 y
-\xx0.(y xx0)
+y
 (y y)
 x
-\xx0.((y \xx2.(z xx2)) xx0)
-\yx2.((y w) yx2)
+(y z)
+(y w)
 (y xx0)
 \yx1.(yx1 (q (y w)))
-\yx1.((q (y w)) yx1)
+(q (y w))
 \xx3.\xx4.\xx5.\xx6.xx6
 \xx1.xx1
 \xx0.y

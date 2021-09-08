@@ -7,8 +7,8 @@
 \x.((\x.(y x) \x.(z x)) x)
 (\y.(\x.\y.(x y) y) (y w))
 (\x.(y x) xx0)
-(\x.\y.(y x) (\z.(q z) (y w)))
-(\x.\y.(x y) (\z.(q z) (y w)))
+(\x.\y.(y x) (\z.(q z) (y w))) 
+(\x.\y.(x y) (\z.(q z) (y w))) # eta-reduction with renaming
 (((\x.\x.\x.\x.\x.\x.\x.x y) y) y)
 (\x.\x.x y)
 (\z.\x.z y)
@@ -16,3 +16,9 @@
 \y.(\x.(x w) \w.(w z))
 \y.(\w0.(w0 z) w)
 \y.(w z)
+(\y.z (\x.(x x) \x.(x x)))  # test applicative order
+(((\y.\y.(y x) y) z) (\z.\x.\x.z \x.\z.\x.x))
+\y.(\z.((q w) z) y) # eta-reduce inside of eta-reduce
+\y.(\z.((q z) z) y) # eta-reduce inside of eta-reduce with z as a free variable as well as bound variable
+\yx0.(\zx0.((q zx0) zx0) yx0) # what if we applied eta-reduction first, and then beta-reduction. We'd get a simpler answer here.
+\yx0.((q yx0) zx0)

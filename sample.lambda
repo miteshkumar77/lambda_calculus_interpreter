@@ -12,3 +12,7 @@
 (((\x.\x.\x.\x.\x.\x.\x.x y) y) y)
 (\x.\x.x y)
 (\z.\x.z y)
+(\x.\y.(\x.(x w) \w.(w x)) z)
+\y.(\x.(x w) \w.(w z))
+\y.(\w0.(w0 z) w)
+\y.(w z)

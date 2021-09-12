@@ -226,9 +226,9 @@ reducer lexp = r
     where 
         initLabelMap = initLabels lexp Set.empty
         uni = getLexp (uniqueRename lexp initLabelMap initLabelMap Set.empty)
-        betar = betaReduce uni
-        etar = etaReduce betar
-        r = etar
+        betard = betaReduce uni
+        etard = etaReduce betard
+        r = etard
 
 
 -- Entry point of program

@@ -1,14 +1,11 @@
 import PA1Helper ( runProgram, Lexp(..) )
 import System.Environment (getArgs)
 import Data.Map (Map)
-import qualified Data.Map as SymbolIDs
 import qualified Data.Map as Map
 import Data.Set (Set)
 import Debug.Trace ( trace ) 
-import qualified Data.Set as BoundIDs
 import qualified Data.Set as Set
 import Data.Maybe ( fromJust )
-import qualified Distribution.Simple as SymbolIDs
 
 -- Haskell representation of lambda expression
 -- data Lexp = Atom String | Lambda String Lexp | Apply Lexp  Lexp 

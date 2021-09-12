@@ -15,4 +15,5 @@
 (\x.\y.(\x.(x w) \w.(w x)) z)
 \y.(\x.(x w) \w.(w z))
 \y.(\w0.(w0 z) w)
-\y.(w z)
+((\n.\m.\f.\x.((n f) ((m f) x)) \f.\x.(f x)) \f.\x.(f (f x))) # Church numeral ((|+| |1|) |2|) => |3|
+((\n.\m.\f.\x.((n f) ((m f) x)) \f.\x.(f (f (f x)))) \f.\x.(f (f x))) # Church numeral ((|+| |3|) |2|) => |5|

@@ -1,4 +1,4 @@
-module PA1Helper (runProgram, Lexp (..)) where
+module PA1Helper (runProgram, Lexp (..), eqHandler) where
 
 import Control.Monad
 import System.Directory
@@ -168,3 +168,33 @@ runProgram inFile outFile reducer = do
   fcontents <- readFile inFile
   let inList = lines fcontents
   sequence_ (zipWith (handler reducer outFile) [1 ..] inList)
+
+ternaryOp :: Bool -> a -> a -> a
+ternaryOp cond first second
+  | cond = first
+  | otherwise = second
+
+checkerOutputPrinter :: String -> String -> Lexp -> Lexp -> Lexp -> IO ()
+checkerOutputPrinter outFile result ilexp clexp alexp = do
+  appendFile outFile ((show clexp) ++ "\n")
+  when doDebugPrint $ do
+    putStrLn ("Input    : " ++ (show ilexp))
+    putStrLn ("Reduced  : " ++ (show clexp))
+    putStrLn ("Expected : " ++ (show alexp))
+    putStrLn ("Verdict  : " ++ (show result))
+    putStrLn ""
+
+eqHandler :: (Lexp -> Lexp -> Bool) -> (Lexp -> Lexp) -> String -> String -> String -> IO ()
+eqHandler eqChecker reducer outFile calcStr ansStr =
+  case parseLExpr calcStr of
+    Left cerr -> do
+      putStrLn ("Parse error for left expression " ++ show calcStr ++ ": " ++ show cerr)
+      writeFile outFile "Error"
+    Right clexp ->
+      case parseLExpr ansStr of
+        Left aerr -> do
+          putStrLn ("Parse error for right expression " ++ show ansStr ++ ": " ++ show aerr)
+          writeFile outFile "Error"
+        Right alexp ->
+          let rlexp = reducer clexp
+           in checkerOutputPrinter outFile (ternaryOp (eqChecker rlexp alexp) "Correct" "Incorrect") clexp rlexp alexp

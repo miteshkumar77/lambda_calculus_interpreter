@@ -20,7 +20,7 @@
 \y.(\z.((q w) z) y) # eta-reduce inside of eta-reduce
 \y.(\z.((q z) z) y) # eta-reduce inside of eta-reduce with z as a free variable as well as bound variable
 \yx0.(\zx0.((q zx0) zx0) yx0) # what if we applied eta-reduction first, and then beta-reduction. we'd get \zx0.((q zx0) zx0) which is equivalent
-((\y.\z.(z y) yx0) zx0) # test renaming conflickts with a free variable that already exists
+((\y.\z.(z y) yx0) zx0) # test renaming conflicts with a free variable that already exists
 ((\n.\m.\f.\x.((n f) ((m f) x)) \f.\x.(f x)) \f.\x.(f (f x))) # Church numeral ((|+| |1|) |2|) => |3|
 ((\n.\m.\f.\x.((n f) ((m f) x)) \f.\x.(f (f (f x)))) \f.\x.(f (f x))) # Church numeral ((|+| |3|) |2|) => |5|
 \n.\m.\f.(n (m f)) # Church numeral |*|

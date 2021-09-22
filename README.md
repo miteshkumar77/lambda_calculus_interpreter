@@ -3,7 +3,7 @@
 ## Group Members
 
 - Mitesh Kumar `<kumarm4>`
-- Alex He `<hea4>`
+- Alex He `<hea2>`
 
 ## Features
 

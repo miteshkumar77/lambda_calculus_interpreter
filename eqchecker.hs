@@ -8,7 +8,7 @@ import Debug.Trace (trace)
 import PA1Helper (Lexp (..), eqHandler, runProgram)
 import PA1Utils (alphaEq, reducer)
 import System.Directory
-import System.Environment
+
 import System.Environment (getArgs)
 import Text.Parsec
 import Text.Parsec.Char

@@ -29,7 +29,7 @@ id' lexp@(Lambda _ _) = lexp
 id' lexp@(Apply _ _) = lexp
 
 -- Debug passthrough function for lazy evaluation
-debug :: String -> Lexp -> Lexp
+debug :: Show a => String -> a -> a
 debug s l = trace (s ++ show l) l
 
 -- allows file names to be unique
@@ -165,7 +165,8 @@ uniqueRename ap@(Apply func args) currmap nextmap bounded =
 alphaRename :: Lexp -> Lexp
 alphaRename lexp = res_lexp
   where
-    LexpLabelMapPair res_lexp _ = uniqueRename lexp Map.empty Map.empty Set.empty
+    init_labels = initLabels lexp Set.empty
+    LexpLabelMapPair res_lexp _ = uniqueRename lexp init_labels init_labels Set.empty
 
 isBetaReducible :: Lexp -> Bool
 isBetaReducible lexp@(Apply la@(Lambda _ _) _) = True
@@ -227,8 +228,6 @@ etaReduce ap@(Apply func args) = Apply (etaReduce func) (etaReduce args)
 reducer :: Lexp -> Lexp
 reducer lexp = r
   where
-    initLabelMap = initLabels lexp Set.empty
-    -- uni = getLexp (uniqueRename lexp initLabelMap initLabelMap Set.empty)
     uni = alphaRename lexp
     betard = betaReduce uni
     etard = etaReduce betard

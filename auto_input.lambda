@@ -12,3 +12,6 @@
 (\x.\x.x y)
 (\z.\x.z y)
 (\x.\y.(\x.(x w) \w.(w x)) z)
+(\y.(\x.(x y) y) yx0)
+\y.(\yx0.(\x.(x yx0) y) y)
+\y.(\yx0.(\x.(x yx0) y) yx0)

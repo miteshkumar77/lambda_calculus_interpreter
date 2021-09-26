@@ -15,3 +15,6 @@ x
 (yx0 yx0)
 \yx0.(yx0 yx0)
 \yx1.(yx1 yx0)
+\yx2.((yx2 yx0) yx1)
+z
+(y (x x))

@@ -15,3 +15,6 @@
 (\y.(\x.(x y) y) yx0)
 \y.(\yx0.(\x.(x yx0) y) y)
 \y.(\yx0.(\x.(x yx0) y) yx0)
+\y.(\yx0.((\x.(x yx0) y) yx1) yx0)
+(\y.z (\x.(q x) \x.(f x)))
+(\x.(\x.(y x) (x x)) x)

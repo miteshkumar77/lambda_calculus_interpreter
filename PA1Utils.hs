@@ -236,17 +236,10 @@ reducer lexp = r
 type SymToSym = Map String String
 
 alphaEqHelper :: Lexp -> Lexp -> SymToSym -> SymToSym -> Bool
-alphaEqHelper (Lambda lname lfunc) (Lambda rname rfunc) ltor rtol
-  | Map.member lname ltor || Map.member rname rtol = False
-  | otherwise =
-    alphaEqHelper
-      lfunc
-      rfunc
-      (Map.insert lname rname ltor)
-      (Map.insert rname lname rtol)
+alphaEqHelper (Lambda lname lfunc) (Lambda rname rfunc) ltor rtol =
+  alphaEqHelper lfunc rfunc (Map.insert lname rname ltor) (Map.insert rname lname rtol)
 alphaEqHelper (Apply lfunc largs) (Apply rfunc rargs) ltor rtol =
-  alphaEqHelper lfunc rfunc ltor rtol
-    && alphaEqHelper largs rargs ltor rtol
+  alphaEqHelper lfunc rfunc ltor rtol && alphaEqHelper largs rargs ltor rtol
 alphaEqHelper (Atom lname) (Atom rname) ltor rtol
   | Map.member lname ltor && Map.member rname rtol =
     fromJust (Map.lookup lname ltor) == rname
@@ -258,7 +251,7 @@ alphaEqHelper _ _ _ _ = False
 alphaEq :: Lexp -> Lexp -> Bool
 alphaEq llexp rlexp =
   alphaEqHelper
-    (alphaRename llexp)
-    (alphaRename rlexp)
+    llexp
+    rlexp
     Map.empty
     Map.empty

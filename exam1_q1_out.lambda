@@ -8,4 +8,4 @@ y
 \xx0.\xx2.xx2
 \xx0.y
 \xx0.(y (xx0 xx0))
-\fx0.\xx0.(fx0 (fx0 xx0))
+\xx0.\xx1.(xx0 (xx0 (xx0 (xx0 xx1))))

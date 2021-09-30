@@ -8,4 +8,4 @@
 \x.(\x.\x.x x)
 \x.\x.(y x)
 \x.(y (x x))
-(\f.\x.(f (f x)) \f.\x.(f (f x)))
+\f.\x.(f (f x)) \f.\x.(f (f x))
